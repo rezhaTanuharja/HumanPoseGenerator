@@ -9,3 +9,5 @@ log
 *.npy
 
 downloads/
+checkpoints/
+output_files/
