@@ -1,0 +1,27 @@
+import torch
+
+CONFIG = {
+    "device": torch.device("cuda"),
+    "data_type": torch.float32,
+    "num_samples": 10,
+    "num_waves": 1024,
+    "num_sinusoids": 32,
+    "mean_squared_displacement": lambda t: 1.5 * t**4,
+    "alpha": 2,
+    "num_iterations": 10,
+    "velocity_checkpoint": "humanposegenerator/checkpoints/diffusion.pth",
+    "batch_size": 4,
+    "total_size": 400,
+    "data_directory": "/home/ratanuh/Datasets/ACCAD/Male2MartialArtsExtended_c3d/",
+    "joint_indices": list(range(3, 66)),
+    "hidden_size_modulator": 32,
+    "hidden_size_main_block": 512,
+    "learning_rate": 0.001,
+    "num_epochs": 750,
+    "epoch_for_pruning": [120, 240, 360, 420, 480, 540, 700],
+    "prune_amount": 0.08,
+    "period": 1.6,
+    "dropout_rate": lambda epoch: max(0.0, 0.6 - 0.0012 * epoch),
+    "num_times": 100,
+    "negative_slope": 0.005,
+}

@@ -1,4 +1,3 @@
-# import torch.cuda
 from os import path as osp
 
 import matplotlib.pyplot as plt
@@ -62,17 +61,19 @@ temporal_components = torch.nn.Sequential(
     torch.nn.Linear(32, 32),
     activation_layer,
     dropout_layer,
-    torch.nn.Linear(32, 52 * 18),
+    torch.nn.Linear(32, 22 * 18),
     activation_layer,
 ).to(device)
 
 spatial_components = torch.nn.Sequential(
-    torch.nn.Linear(52 * 9, 100),
+    torch.nn.Linear(22 * 9, 512),
     activation_layer,
     dropout_layer,
-    torch.nn.Linear(100, 100),
+    torch.nn.Linear(512, 512),
     activation_layer,
-    torch.nn.Linear(100, 52 * 3),
+    # torch.nn.Linear(512, 512),
+    # activation_layer,
+    torch.nn.Linear(512, 22 * 3),
 ).to(device)
 
 parameters_to_prune = [
@@ -82,6 +83,7 @@ parameters_to_prune = [
     (spatial_components[0], "weight"),  # First Linear in spatial_components
     (spatial_components[3], "weight"),  # Second Linear in spatial_components
     (spatial_components[5], "weight"),  # Last Linear in spatial_components
+    # (spatial_components[12], "weight"),  # Last Linear in spatial_components
 ]
 
 torch.nn.utils.prune.global_unstructured(
@@ -93,7 +95,10 @@ torch.nn.utils.prune.global_unstructured(
 
 model = FiLM(modulator=temporal_components, head=spatial_components).to(device)
 
-checkpoint = torch.load("checkpoints/human.pth", weights_only=True)
+checkpoint = torch.load(
+    "checkpoints/human.pth",
+    weights_only=True,
+)
 
 state_dict = checkpoint["model_state_dict"]
 module_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
@@ -110,25 +115,7 @@ time = torch.tensor(
     device=device,
 )
 
-final_condition = sample_uniform_so3(20 * 52).to(device).unsqueeze(0)
-
-manifold = SpecialOrthogonal3(device=device, data_type=torch.float32)
-
-for j in range(num_times + 1):
-    encoded_time = time_encoder(time, 1.6, num_waves=32)
-
-    encoded_time = encoded_time.view(1, 2 * 32)
-    encoded_time_data = encoded_time.repeat(20, 1)
-    final_condition_data = final_condition.view(20, 52, 3, 3)
-    final_condition_data = final_condition.view(20, 52, 9)
-    final_condition_data = final_condition.view(20, 52 * 9)
-
-    outputs = model(final_condition_data, encoded_time_data)
-
-    final_condition = manifold.exp(
-        final_condition, -1.0 * dt * outputs.view(20, 52, 3).view(20 * 52, 3)
-    )
-    time = time - dt
+num_samples = 300
 
 
 support_dir = "/home/ratanuh/Datasets/"
@@ -137,7 +124,7 @@ comp_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # comp_device = torch.device("cpu")
 
 amass_npz_fname = osp.join(
-    support_dir, "ACCAD/Male2Running_c3d/C18 - run to hop to walk_poses.npz"
+    support_dir, "ACCAD/Male2MartialArtsExtended_c3d/Extended 2_poses.npz"
 )  # the path to body data
 bdata = np.load(amass_npz_fname)
 
@@ -172,9 +159,48 @@ bm = BodyModel(
 bdata_dict = dict(bdata)  # Convert npz object to a dictionary
 bdata_dict["poses"] = bdata_dict["poses"].copy()
 
-bdata_dict["poses"][:20] = (
+manifold = SpecialOrthogonal3(device=device, data_type=torch.float32)
+
+final_condition = bdata_dict["poses"][125, :66]
+final_condition = torch.tensor(final_condition, device=device, dtype=torch.float32)
+final_condition = final_condition.repeat(num_samples, 1)
+final_condition = manifold.exp(
+    torch.eye(3, device=device), final_condition.view(num_samples, 22, 3)
+)
+random_joints = sample_uniform_so3(num_samples * 8).to(device).unsqueeze(0)
+random_joints = random_joints.view(num_samples, 8, 3, 3)
+
+final_condition[:, [i + 14 for i in range(8)], :, :] = random_joints
+
+final_condition = final_condition.view(num_samples * 22, 3, 3)
+
+
+for j in range(num_times + 1):
+    encoded_time = time_encoder(time, 1.6, num_waves=32)
+
+    encoded_time = encoded_time.view(1, 2 * 32)
+    encoded_time_data = encoded_time.repeat(num_samples, 1)
+    final_condition_data = final_condition.view(num_samples, 22, 3, 3)
+    final_condition_data = final_condition.view(num_samples, 22, 9)
+    final_condition_data = final_condition.view(num_samples, 22 * 9)
+
+    outputs = model(final_condition_data, encoded_time_data)
+    outputs = outputs.view(num_samples, 22, 3)
+    outputs[:, [i for i in range(14)], :] = torch.zeros(
+        size=(num_samples, 14, 3), device=device, dtype=torch.float32
+    )
+    outputs = outputs.view(num_samples, 66)
+    # print(outputs.shape)
+
+    final_condition = manifold.exp(
+        final_condition,
+        1.0 * dt * outputs.view(num_samples, 22, 3).view(num_samples * 22, 3),
+    )
+    time = time - dt
+
+bdata_dict["poses"][:num_samples, :66] = (
     manifold.log(torch.eye(3, device=device), final_condition)
-    .view(20, 52, 3)
+    .view(num_samples, 22, 3)
     .flatten(-2)
     .cpu()
     .detach()
@@ -186,7 +212,7 @@ bdata = bdata_dict
 faces = c2c(bm.f)
 
 
-# bdata["poses"][:20] = np.copy(manifold.log(torch.eye(3, device=device), final_condition).view(20, 52, 3).flatten(-2).cpu().detach().numpy())
+# bdata["poses"][:num_samples] = np.copy(manifold.log(torch.eye(3, device=device), final_condition).view(num_samples, 22, 3).flatten(-2).cpu().detach().numpy())
 
 time_length = len(bdata["trans"])
 
@@ -239,7 +265,7 @@ def vis_body_pose_beta(fId=0):
     show_image(body_image)
 
 
-for i in range(0, 20):
+for i in range(0, num_samples):
     vis_body_pose_beta(fId=i)
-    plt.savefig(f"./output_files/ground_truth/running_{i:03}.jpg")
+    plt.savefig(f"./output_files/ground_truth/running_{(i + 0):03}.jpg")
     plt.close()
