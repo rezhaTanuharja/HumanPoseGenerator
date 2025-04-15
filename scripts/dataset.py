@@ -65,7 +65,9 @@ def main(local_rank: int = 0, world_size: int = 1):
             )
 
         for (batch,) in dataloader:
-            time = CONFIG["period"] * utilities.samplers.latin_hypercube_sampling(
+            time = utilities.samplers.latin_hypercube_sampling(
+                lower_bound=0.0,
+                upper_bound=CONFIG["period"],
                 num_samples=CONFIG["num_times"],
                 device=CONFIG["device"],
             )

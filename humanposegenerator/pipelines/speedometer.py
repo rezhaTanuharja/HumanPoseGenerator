@@ -1,12 +1,15 @@
-from typing import Any, Dict
+from typing import Any, Dict, Callable
 
 import torch
 
 from humanposegenerator.models.modulators import FiLM
 
 
-def generate_speedometer(parameters: Dict[str, Any]):
+def generate_speedometer(
+    parameters: Dict[str, Any],
+) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
     """
+    Produce a conditional velocity model.
 
     Parameters
     ----------
@@ -14,6 +17,7 @@ def generate_speedometer(parameters: Dict[str, Any]):
 
     Returns
     -------
+    A model to compute conditional velocity from `location` and `condition`
     """
     activation_layer = torch.nn.LeakyReLU(negative_slope=0.005)
     dropout_layer = torch.nn.Dropout(p=0.0)

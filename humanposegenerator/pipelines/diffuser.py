@@ -83,12 +83,12 @@ def generate_diffuser(
             initial_condition,
         )
 
-        axis = axis_process.at(time).sample(21 * parameters["batch_size"])
-        angle = angle_process.at(time).sample(21 * parameters["batch_size"])
-        angle.requires_grad_()
-
-        y = torch.log(angle_process.density(angle))
-        y.sum().backward()
+        axis = axis_process.at(time).sample(
+            len(parameters["joint_indices"]) // 3 * parameters["batch_size"],
+        )
+        angle = angle_process.at(time).sample(
+            len(parameters["joint_indices"]) // 3 * parameters["batch_size"],
+        )
 
         lamb = 2.0
 
@@ -105,7 +105,10 @@ def generate_diffuser(
 
         noisy_poses = manifold.exp(
             rotation_matrices.unsqueeze(0),
-            axis_angle.unflatten(1, (4, 21)),
+            axis_angle.unflatten(
+                1,
+                (parameters["batch_size"], len(parameters["joint_indices"]) // 3),
+            ),
         )
 
         relative_poses = torch.einsum(
