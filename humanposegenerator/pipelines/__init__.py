@@ -8,10 +8,10 @@ Modules
 `speedometer`   : compute conditional velocity field.
 """
 
-from . import diffuser, encoders, speedometer
+from . import diffuser, encoders, velocimeter
 
 __all__ = [
     "diffuser",
     "encoders",
-    "speedometer",
+    "velocimeter",
 ]

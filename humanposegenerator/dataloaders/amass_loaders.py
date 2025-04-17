@@ -1,13 +1,15 @@
 """Codes to load human poses from AMASS datasets."""
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 import torch
 
 
-def load_and_combine_amass_poses(parameters: Dict[str, Any]) -> torch.Tensor:
+def load_and_combine_amass_poses(
+    data_directory: str, joint_indices: List[int]
+) -> torch.Tensor:
     """
     Load and concatenate poses from `.npz` files in the AMASS dataset.
 
@@ -24,13 +26,13 @@ def load_and_combine_amass_poses(parameters: Dict[str, Any]) -> torch.Tensor:
     """
     combined_poses = []
 
-    for path, _, filenames in os.walk(parameters["data_directory"]):
+    for path, _, filenames in os.walk(data_directory):
         for filename in filenames:
             if not filename.endswith(".npz"):
                 continue
 
             data = np.load(os.path.join(path, filename))
-            combined_poses.append(data["poses"][:, parameters["joint_indices"]])
+            combined_poses.append(data["poses"][:, joint_indices])
 
     combined_poses = torch.tensor(
         np.concatenate(combined_poses, axis=0),

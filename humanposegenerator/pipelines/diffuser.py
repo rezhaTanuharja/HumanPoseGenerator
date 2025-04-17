@@ -14,7 +14,7 @@ from diffusionmodels.stochasticprocesses.univariate.inversetransforms.rootfinder
 )
 
 
-def generate_diffuser(
+def create_diffuser(
     parameters: Dict[str, Any],
 ) -> Callable[[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
     """

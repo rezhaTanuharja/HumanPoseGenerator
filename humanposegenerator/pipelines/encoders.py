@@ -4,10 +4,10 @@ import torch
 from diffusionmodels import dataprocessing
 
 
-def generate_encoder(parameters: Dict[str, Any]):
+def create_encoder(parameters: Dict[str, Any]):
     waves = torch.arange(
         1,
-        parameters["num_sinusoids"] + 1,
+        parameters["num_frequencies"] + 1,
         device=parameters["device"],
     ).unsqueeze(0)
 

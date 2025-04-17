@@ -1,11 +1,11 @@
-from typing import Any, Dict, Callable
+from typing import Any, Callable, Dict
 
 import torch
 
 from humanposegenerator.models.modulators import FiLM
 
 
-def generate_speedometer(
+def create_velocimeter(
     parameters: Dict[str, Any],
 ) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
     """
@@ -23,7 +23,7 @@ def generate_speedometer(
     dropout_layer = torch.nn.Dropout(p=0.0)
 
     temporal_conditioner = torch.nn.Sequential(
-        torch.nn.Linear(2 * parameters["num_sinusoids"], 32),
+        torch.nn.Linear(2 * parameters["num_frequencies"], 32),
         activation_layer,
         torch.nn.Linear(32, 32),
         activation_layer,
@@ -59,7 +59,7 @@ def generate_speedometer(
     velocity_model.eval()
     velocity_model.to(parameters["device"])
 
-    def speedometer(location: torch.Tensor, condition: torch.Tensor):
+    def velocimeter(location: torch.Tensor, condition: torch.Tensor):
         """
         Compute the conditional velocity at given location.
 
@@ -69,7 +69,7 @@ def generate_speedometer(
         A tensor with shape `(num_times, num_samples, num_joints, 3, 3)`
 
         `condition: torch.Tensor`
-        A tensor with shape `(num_times, num_samples, 2 * num_sinusoids)`
+        A tensor with shape `(num_times, num_samples, 2 * num_frequencies)`
 
         Returns
         -------
@@ -86,4 +86,4 @@ def generate_speedometer(
             ),
         )
 
-    return speedometer
+    return velocimeter
