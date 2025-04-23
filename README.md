@@ -8,9 +8,9 @@
         ∙
         <a href="#demo">demonstration</a>
     </p>
-    <img src="assets/prior_1.gif" height="200" alt="Description of image">
-    <img src="assets/prior_2.gif" height="200" alt="Description of image">
-    <img src="assets/prior_3.gif" height="200" alt="Description of image">
+    <img src="assets/prior_1.gif" height="200" width="160" alt="Description of image">
+    <img src="assets/prior_2.gif" height="200" width="120" alt="Description of image">
+    <img src="assets/prior_3.gif" height="200" width="150" alt="Description of image">
 </div>
 <div id="introduction" align="left">
     <h2>Introduction</h2>
