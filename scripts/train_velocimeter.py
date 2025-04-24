@@ -23,6 +23,17 @@ def main(local_rank: int = 0):
     encoder = pipelines.encoders.create_encoder(velocimeter_config)
 
     model = models.sequential.Assembly(velocimeter_config["model"])
+
+    checkpoint = torch.load(
+        "humanposegenerator/checkpoints/velocimeter.pth",
+        weights_only=True,
+    )
+
+    state_dict = checkpoint["model_state_dict"]
+    module_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+
+    model.load_state_dict(module_state_dict)
+
     model.to(velocimeter_config["device"])
     model.train()
 
@@ -50,7 +61,7 @@ def main(local_rank: int = 0):
         running_loss = 0.0
         num_reps = 0
 
-        for _ in range(500):
+        for _ in range(1000):
             time = utilities.sample.latin_hypercube_sampling(
                 lower_bound=0.0,
                 upper_bound=velocimeter_config["period"],

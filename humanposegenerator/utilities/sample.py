@@ -39,3 +39,40 @@ def latin_hypercube_sampling(
     )
 
     return intervals + jitter
+
+
+def sample_uniform_so3(num_samples: int) -> torch.Tensor:
+    """
+    Generate uniform samples on SO(3) based on Shoemake's method.
+
+    Parameters
+    ----------
+    `num_samples: int`
+    The number of uniformly distributed samples to generate.
+
+    Returns
+    -------
+    `torch.Tensor`
+    A tensor with shape `(num_samples, 3, 3)`
+    """
+    u1, u2, u3 = torch.rand(3, num_samples)
+
+    q0 = torch.sqrt(1.0 - u1) * torch.sin(2 * torch.pi * u2)
+    q1 = torch.sqrt(1.0 - u1) * torch.cos(2 * torch.pi * u2)
+    q2 = torch.sqrt(u1) * torch.sin(2 * torch.pi * u3)
+    q3 = torch.sqrt(u1) * torch.cos(2 * torch.pi * u3)
+
+    return torch.stack(
+        [
+            1 - 2 * (q2**2 + q3**2),
+            2 * (q1 * q2 - q0 * q3),
+            2 * (q1 * q3 + q0 * q2),
+            2 * (q1 * q2 + q0 * q3),
+            1 - 2 * (q1**2 + q3**2),
+            2 * (q2 * q3 - q0 * q1),
+            2 * (q1 * q3 - q0 * q2),
+            2 * (q2 * q3 + q0 * q1),
+            1 - 2 * (q1**2 + q2**2),
+        ],
+        dim=-1,
+    ).reshape(num_samples, 3, 3)

@@ -9,7 +9,7 @@ CONFIG["velocimeter"] = {
     "data_type": torch.float32,
     "alpha": 0,
     "period": 1.6,
-    "num_waves": 4096,
+    "num_waves": 8192,
     "num_iterations": 24,
     "mean_squared_displacement": lambda t: 1.5 * t**4,
     "num_frequencies": 32,
