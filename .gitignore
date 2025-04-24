@@ -12,3 +12,5 @@ downloads/
 checkpoints/
 output_files/
 losses/
+
+.DS_store
