@@ -1,13 +1,30 @@
+"""Provide various functions to interact with the AMASS dataset."""
+
 import os
 from typing import List
 
 import numpy as np
 
 
-def load_and_combine_amass_poses(
+def load_and_combine_poses(
     data_directory: str,
     joint_indices: List[int],
 ) -> np.ndarray:
+    """
+    Recursively search and load poses from `.npz` files in a given directory.
+
+    Parameters
+    ----------
+    `data_directory: str`
+    The root directory to begin search from.
+
+    `joint_indices: List[int]`
+    The indices of joints to load
+
+    Returns
+    -------
+    A NumPy array with shape `(num_samples, num_joints, 3)`
+    """
     combined_poses = []
 
     for path, _, filenames in os.walk(data_directory):

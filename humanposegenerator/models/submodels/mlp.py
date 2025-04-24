@@ -66,7 +66,7 @@ class MultiLayerPerceptron(torch.nn.Module):
         Returns
         -------
         `torch.Tensor`
-        A tensor with shape `(..., num_neurons_in_last_layer)`A.
+        A tensor with shape `(..., num_neurons_in_last_layer)`.
         """
         utilities.typing.unused_variables(condition)
 

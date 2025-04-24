@@ -14,11 +14,17 @@ from diffusionmodels.stochasticprocesses.univariate.inversetransforms.rootfinder
 )
 
 
-def create_diffuser(
+def create_empirical_diffuser(
     parameters: Dict[str, Any],
 ) -> Callable[[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
     """
-    Generate a diffuser based on training parameters.
+    Generate an empirical diffuser based on training parameters.
+
+    Note
+    ----
+    An empirical diffuser transforms clean poses into noisy poses.
+    This diffuser cannot evaluate the analytical velocity vector field.
+    It can only compute the vectors connecting clean and noisy poses (increment).
 
     Parameters
     ----------
@@ -27,7 +33,7 @@ def create_diffuser(
 
     Returns
     -------
-    A function mapping `initial_condition` and `time` to `diffused_condition` and `increment`
+    A function mapping `(initial_condition, time)` to `(diffused_condition, increment)`
     """
     axis_process = UniformSphere(
         dimension=3,
@@ -57,7 +63,7 @@ def create_diffuser(
         data_type=parameters["data_type"],
     )
 
-    def diffuser(
+    def empirical_diffuser(
         initial_condition: torch.Tensor,
         time: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -119,14 +125,19 @@ def create_diffuser(
 
         return noisy_poses, relative_poses
 
-    return diffuser
+    return empirical_diffuser
 
 
 def create_analytical_diffuser(
     parameters: Dict[str, Any],
 ) -> Callable[[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
     """
-    Generate a diffuser based on training parameters.
+    Generate an analytical diffuser based on training parameters.
+
+    Note
+    ----
+    An analytical diffuser transforms clean poses into noisy poses.
+    This diffuser can evaluate the analytical velocity vector field at noisy poses.
 
     Parameters
     ----------
@@ -135,7 +146,7 @@ def create_analytical_diffuser(
 
     Returns
     -------
-    A function mapping `initial_condition` and `time` to `diffused_condition` and `increment`
+    A function mapping `(initial_condition, time)` to `(diffused_condition, velocity)`
     """
     axis_process = UniformSphere(
         dimension=3,
@@ -165,7 +176,7 @@ def create_analytical_diffuser(
         data_type=parameters["data_type"],
     )
 
-    def diffuser(
+    def analytical_diffuser(
         initial_condition: torch.Tensor,
         time: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -184,7 +195,9 @@ def create_analytical_diffuser(
         -------
         `Tuple[torch.Tensor, torch.Tensor]`
         The diffused condition and the difference between the diffused and initial conditions.
-        Each is a tensor with shape `(num_times, num_samples, num_joints, 3, 3)`
+        The shapes of the tensors are:
+        `(num_times, num_samples, num_joints, 3, 3)` and
+        `(num_times, num_samples, num_joints, 3)` respectively.
         """
         axis = axis_process.at(time).sample(
             parameters["batch_size"],
@@ -230,4 +243,4 @@ def create_analytical_diffuser(
 
         return noisy_poses, velocity
 
-    return diffuser
+    return analytical_diffuser

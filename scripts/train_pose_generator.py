@@ -12,7 +12,7 @@ from humanposegenerator import models, pipelines, utilities
 def main(local_rank: int = 0, world_size: int = 1):
     pose_generator_config = CONFIG["pose_generator"]
 
-    dataset = utilities.dataset.load_and_combine_amass_poses(
+    dataset = utilities.amass.load_and_combine_poses(
         pose_generator_config["data_directory"],
         pose_generator_config["joint_indices"],
     )
@@ -35,7 +35,7 @@ def main(local_rank: int = 0, world_size: int = 1):
         drop_last=True,
     )
 
-    diffuser = pipelines.diffuser.create_diffuser(pose_generator_config)
+    diffuser = pipelines.diffuser.create_empirical_diffuser(pose_generator_config)
     velocimeter = pipelines.velocimeter.create_velocimeter(pose_generator_config)
     encoder = pipelines.encoders.create_encoder(pose_generator_config)
 

@@ -8,7 +8,7 @@ from torch.nn.parallel import DistributedDataParallel
 from humanposegenerator import models, pipelines, utilities
 
 
-def main(local_rank: int = 0, world_size: int = 1):
+def main(local_rank: int = 0):
     velocimeter_config = CONFIG["velocimeter"]
 
     point_source = torch.eye(
@@ -100,6 +100,6 @@ if __name__ == "__main__":
 
     torch.cuda.set_device(local_rank)
 
-    main(local_rank, world_size)
+    main(local_rank)
 
     torch.distributed.destroy_process_group()

@@ -6,10 +6,10 @@ Modules
 `samplers`  : codes to perform non-standard sampling.
 """
 
-from . import dataset, sample, torch_module, typing
+from . import amass, sample, torch_module, typing
 
 __all__ = [
-    "dataset",
+    "amass",
     "sample",
     "torch_module",
     "typing",

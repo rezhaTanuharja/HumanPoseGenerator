@@ -9,12 +9,12 @@ CONFIG["velocimeter"] = {
     "data_type": torch.float32,
     "alpha": 0,
     "period": 1.6,
-    "num_waves": 8192,
+    "num_waves": 4096,
     "num_iterations": 24,
     "mean_squared_displacement": lambda t: 1.5 * t**4,
     "num_frequencies": 32,
-    "batch_size": 4,
-    "num_times": 200,
+    "batch_size": 1,
+    "num_times": 600,
     "num_epochs": 8000,
     "learning_rate": 5e-5,
     "dropout_rate": 0.0,
@@ -36,32 +36,32 @@ CONFIG["velocimeter"]["model"] = [
     },
     {
         "mlp": {
-            "signal_shapes": (9, 80),
+            "signal_shapes": (9, 64, 64, 3),
             "dropout_at": (0,),
             "activation_layer": activation_layer,
             "drop_last_activation": True,
         },
     },
-    {
-        "modulator": {
-            "signal_shapes": (
-                2 * CONFIG["velocimeter"]["num_frequencies"],
-                32,
-                32,
-                160,
-            ),
-            "dropout_at": (1,),
-            "activation_layer": activation_layer,
-        },
-    },
-    {
-        "mlp": {
-            "signal_shapes": (80, 80, 3),
-            "dropout_at": (0,),
-            "activation_layer": activation_layer,
-            "drop_last_activation": True,
-        },
-    },
+    # {
+    #     "modulator": {
+    #         "signal_shapes": (
+    #             2 * CONFIG["velocimeter"]["num_frequencies"],
+    #             80,
+    #             80,
+    #             128,
+    #         ),
+    #         "dropout_at": (1,),
+    #         "activation_layer": activation_layer,
+    #     },
+    # },
+    # {
+    #     "mlp": {
+    #         "signal_shapes": (64, 64, 3),
+    #         "dropout_at": (0,),
+    #         "activation_layer": activation_layer,
+    #         "drop_last_activation": True,
+    #     },
+    # },
 ]
 
 CONFIG["pose_generator"] = {

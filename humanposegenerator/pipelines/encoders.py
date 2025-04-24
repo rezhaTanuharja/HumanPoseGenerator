@@ -4,7 +4,10 @@ import torch
 from diffusionmodels import dataprocessing
 
 
-def create_encoder(parameters: Dict[str, Any]):
+def create_encoder(parameters: Dict[str, Any]) -> dataprocessing.sequential.Transform:
+    """
+    Create a sinusoidal time encoder based on training parameters.
+    """
     waves = torch.arange(
         1,
         parameters["num_frequencies"] + 1,
