@@ -17,7 +17,7 @@ install: create_env install_amass install_manifold_diffusion
 
 .PHONY: create_env
 create_env:
-	conda create --name $(ENV_NAME) python=$(PYTHON_VERSION) -y
+	conda create --name $(ENV_NAME) python=$(PYTHON_VERSION) -c conda-forge -y
 	conda run --name $(ENV_NAME) pip install pyrender==$(PYRENDER_VERSION) matplotlib==$(MATPLOTLIB_VERSION) opencv-python==$(OPENCV_VERSION)
 
 .PHONY: install_manifold_diffusion
