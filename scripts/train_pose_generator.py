@@ -10,13 +10,15 @@ from humanposegenerator import models, pipelines, utilities
 
 
 def main(local_rank: int = 0, world_size: int = 1):
-    dataset = utilities.load_amass.load_and_combine_amass_poses(
-        CONFIG["data_directory"],
-        CONFIG["joint_indices"],
+    pose_generator_config = CONFIG["pose_generator"]
+
+    dataset = utilities.dataset.load_and_combine_amass_poses(
+        pose_generator_config["data_directory"],
+        pose_generator_config["joint_indices"],
     )
 
     tensor_dataset = TensorDataset(
-        torch.from_numpy(dataset).to(dtype=CONFIG["data_type"]),
+        torch.from_numpy(dataset).to(dtype=pose_generator_config["data_type"]),
     )
 
     sampler = DistributedSampler(
@@ -28,44 +30,47 @@ def main(local_rank: int = 0, world_size: int = 1):
 
     dataloader = DataLoader(
         tensor_dataset,
-        batch_size=CONFIG["batch_size"],
+        batch_size=pose_generator_config["batch_size"],
         sampler=sampler,
         drop_last=True,
     )
 
-    diffuser = pipelines.diffuser.create_diffuser(CONFIG)
-    velocimeter = pipelines.velocimeter.create_velocimeter(CONFIG)
-    encoder = pipelines.encoders.create_encoder(CONFIG)
+    diffuser = pipelines.diffuser.create_diffuser(pose_generator_config)
+    velocimeter = pipelines.velocimeter.create_velocimeter(pose_generator_config)
+    encoder = pipelines.encoders.create_encoder(pose_generator_config)
 
-    model = models.sequential.Assembly(CONFIG["model"])
-    model.to(CONFIG["device"])
+    model = models.sequential.Assembly(pose_generator_config["model"])
+    model.to(pose_generator_config["device"])
     model.train()
 
     distributed_model = DistributedDataParallel(model, device_ids=[local_rank])
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=CONFIG["learning_rate"])
+    optimizer = torch.optim.Adam(
+        distributed_model.parameters(),
+        lr=pose_generator_config["learning_rate"],
+    )
 
     criterion = torch.nn.MSELoss()
 
-    for epoch in range(100):
+    for epoch in range(pose_generator_config["num_epochs"]):
         running_loss = 0.0
         num_batches = 0
 
         utilities.torch_module.set_dropout_rate(
             model,
-            CONFIG["dropout_rate"](epoch),
+            pose_generator_config["dropout_rate"](epoch),
         )
 
         for batch in dataloader:
             (poses,) = batch
 
-            poses = poses.to(CONFIG["device"])
+            poses = poses.to(pose_generator_config["device"])
 
-            time = utilities.samplers.latin_hypercube_sampling(
+            time = utilities.sample.latin_hypercube_sampling(
                 lower_bound=0.0,
-                upper_bound=CONFIG["period"],
-                num_samples=CONFIG["num_times"],
-                device=CONFIG["device"],
+                upper_bound=pose_generator_config["period"],
+                num_samples=pose_generator_config["num_times"],
+                device=pose_generator_config["device"],
             )
 
             noisy_poses, relative_poses = diffuser(poses, time)
@@ -102,7 +107,7 @@ def main(local_rank: int = 0, world_size: int = 1):
                 "optimizer_state_dict": optimizer.state_dict(),
             }
 
-            torch.save(checkpoint, CONFIG["checkpoint"])
+            torch.save(checkpoint, pose_generator_config["checkpoint"])
 
 
 if __name__ == "__main__":

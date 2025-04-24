@@ -68,7 +68,7 @@ class MultiLayerPerceptron(torch.nn.Module):
         `torch.Tensor`
         A tensor with shape `(..., num_neurons_in_last_layer)`A.
         """
-        utilities.warning_suppressors.unused_variables(condition)
+        utilities.typing.unused_variables(condition)
 
         for layer in cast(torch.nn.ModuleList, self._layers):
             signal = layer(signal)
