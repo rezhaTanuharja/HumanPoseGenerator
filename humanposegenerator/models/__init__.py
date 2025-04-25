@@ -3,13 +3,13 @@ Provides NN models to generate human poses.
 
 Modules
 -------
-`modulators`    : modulate inputs using preprocessed condition.
+`sequential`    : models consisting of components that run sequentially.
+`submodels`     : primitive models or layers
 """
 
-from . import modulators, sequential, submodels
+from . import sequential, submodels
 
 __all__ = [
-    "modulators",
     "sequential",
     "submodels",
 ]

@@ -1,3 +1,5 @@
+"""Various utility methods to perform sampling."""
+
 import torch
 
 
