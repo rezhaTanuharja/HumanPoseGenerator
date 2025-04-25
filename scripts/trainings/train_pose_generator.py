@@ -1,16 +1,27 @@
+"""
+Train a model to generate realistic human poses.
+
+Author
+------
+Tanuharja, R.A. -- tanuharja@ias.uni-stuttgart.de
+
+Date
+----
+2024-04-20
+"""
+
 import os
 
 import torch
 import torch.distributed
-from config import CONFIG
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler, TensorDataset
 
-from humanposegenerator import models, pipelines, utilities
+from humanposegenerator import config, models, pipelines, utilities
 
 
 def main(local_rank: int = 0, world_size: int = 1):
-    pose_generator_config = CONFIG["pose_generator"]
+    pose_generator_config = config.CONFIG["pose_generator"]
 
     dataset = utilities.amass.load_and_combine_poses(
         pose_generator_config["data_directory"],
@@ -90,6 +101,10 @@ def main(local_rank: int = 0, world_size: int = 1):
             optimizer.zero_grad()
 
             loss = criterion(predicted_velocity, reference_velocity)
+
+            if torch.isnan(loss).any():
+                continue
+
             loss.backward()
 
             optimizer.step()
@@ -118,6 +133,8 @@ if __name__ == "__main__":
 
     torch.cuda.set_device(local_rank)
 
-    main(local_rank, world_size)
-
-    torch.distributed.destroy_process_group()
+    try:
+        main(local_rank, world_size)
+    except Exception as e:
+        torch.distributed.destroy_process_group()
+        raise e

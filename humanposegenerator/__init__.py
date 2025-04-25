@@ -10,16 +10,17 @@ Modules
 
 Author
 ------
-Tanuharja, R.A.
+Tanuharja, R.A. -- tanuharja@ias.uni-stuttgart.de
 
 Date
 ----
 2024-04-15
 """
 
-from . import models, pipelines, utilities
+from . import config, models, pipelines, utilities
 
 __all__ = [
+    "config",
     "models",
     "pipelines",
     "utilities",

@@ -1,15 +1,29 @@
+"""
+Train a small model to learn the inverse flow of a pseudo-diffusion process.
+The process starts from a single concentrated point and ends as a uniformly distributed point on SO(3).
+
+Author
+------
+Tanuharja, R.A. -- tanuharja@ias.uni-stuttgart.de
+
+Date
+----
+2024-04-20
+"""
+
 import os
 
 import torch
 import torch.distributed
-from config import CONFIG
 from torch.nn.parallel import DistributedDataParallel
 
-from humanposegenerator import models, pipelines, utilities
+from humanposegenerator import config, models, pipelines, utilities
 
 
 def main(local_rank: int = 0):
-    velocimeter_config = CONFIG["velocimeter"]
+    velocimeter_config = config.CONFIG["velocimeter"]
+
+    # NOTE: origin is set to the identity matrix because it's easier to visualize.
 
     point_source = torch.eye(
         3,
@@ -23,17 +37,6 @@ def main(local_rank: int = 0):
     encoder = pipelines.encoders.create_encoder(velocimeter_config)
 
     model = models.sequential.Assembly(velocimeter_config["model"])
-
-    checkpoint = torch.load(
-        "humanposegenerator/checkpoints/velocimeter.pth",
-        weights_only=True,
-    )
-
-    state_dict = checkpoint["model_state_dict"]
-    module_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
-
-    model.load_state_dict(module_state_dict)
-
     model.to(velocimeter_config["device"])
     model.train()
 
@@ -61,6 +64,8 @@ def main(local_rank: int = 0):
         running_loss = 0.0
         num_reps = 0
 
+        # NOTE: one epoch is too fast, so we pretend there are 1000 batches.
+
         for _ in range(1000):
             time = utilities.sample.latin_hypercube_sampling(
                 lower_bound=0.0,
@@ -81,10 +86,16 @@ def main(local_rank: int = 0):
             optimizer.zero_grad()
 
             loss = criterion(predicted_velocity, reference_velocity)
+
+            if torch.isnan(loss).any():
+                continue
+
             loss.backward()
 
             running_loss += loss.item()
             num_reps += 1
+
+            optimizer.step()
 
         scheduler.step()
 
@@ -94,23 +105,23 @@ def main(local_rank: int = 0):
             state_dict = utilities.torch_module.get_state_dict(model)
 
             checkpoint = {
+                "epoch": epoch,
                 "model_state_dict": state_dict,
                 "optimizer_state_dict": optimizer.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
             }
 
             torch.save(checkpoint, velocimeter_config["checkpoint"])
-
-        optimizer.step()
 
 
 if __name__ == "__main__":
     torch.distributed.init_process_group("nccl")
 
     local_rank = int(os.environ["RANK"])
-    world_size = int(os.environ["WORLD_SIZE"])
-
     torch.cuda.set_device(local_rank)
 
-    main(local_rank)
-
-    torch.distributed.destroy_process_group()
+    try:
+        main(local_rank)
+    except Exception as e:
+        torch.distributed.destroy_process_group()
+        raise e

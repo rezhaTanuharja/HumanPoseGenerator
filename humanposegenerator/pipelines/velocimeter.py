@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict
 
 import torch
 
-from humanposegenerator.models.modulators import FiLM
+from humanposegenerator import models
 
 
 def create_velocimeter(
@@ -19,34 +19,8 @@ def create_velocimeter(
     -------
     A model to compute conditional velocity from `location` and `condition`
     """
-    activation_layer = torch.nn.LeakyReLU(negative_slope=0.005)
-    dropout_layer = torch.nn.Dropout(p=0.0)
 
-    temporal_conditioner = torch.nn.Sequential(
-        torch.nn.Linear(2 * parameters["num_frequencies"], 32),
-        activation_layer,
-        torch.nn.Linear(32, 32),
-        activation_layer,
-        dropout_layer,
-        torch.nn.Linear(32, 18),
-        activation_layer,
-    ).to(parameters["device"])
-
-    spatial_head = torch.nn.Sequential(
-        torch.nn.Linear(9, 80),
-        activation_layer,
-        dropout_layer,
-        torch.nn.Linear(80, 80),
-        activation_layer,
-        torch.nn.Linear(80, 3),
-    ).to(parameters["device"])
-
-    velocity_model = FiLM(
-        modulator=temporal_conditioner,
-        main_block=spatial_head,
-    ).to(
-        parameters["device"],
-    )
+    velocity_model = models.sequential.Assembly(parameters["velocimeter"])
 
     checkpoint = torch.load(parameters["velocity_checkpoint"], weights_only=True)
 

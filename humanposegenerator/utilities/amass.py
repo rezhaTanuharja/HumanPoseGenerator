@@ -7,7 +7,7 @@ import numpy as np
 
 
 def load_and_combine_poses(
-    data_directory: str,
+    data_directories: List[str],
     joint_indices: List[int],
 ) -> np.ndarray:
     """
@@ -15,8 +15,8 @@ def load_and_combine_poses(
 
     Parameters
     ----------
-    `data_directory: str`
-    The root directory to begin search from.
+    `data_directories: List[str]`
+    The list of directories to search from.
 
     `joint_indices: List[int]`
     The indices of joints to load
@@ -27,13 +27,14 @@ def load_and_combine_poses(
     """
     combined_poses = []
 
-    for path, _, filenames in os.walk(data_directory):
-        for filename in filenames:
-            if not filename.endswith(".npz"):
-                continue
+    for directory in data_directories:
+        for path, _, filenames in os.walk(directory):
+            for filename in filenames:
+                if not filename.endswith(".npz"):
+                    continue
 
-            data = np.load(os.path.join(path, filename))
-            combined_poses.append(data["poses"][:, joint_indices])
+                data = np.load(os.path.join(path, filename))
+                combined_poses.append(data["poses"][:, joint_indices])
 
     combined_poses = np.concatenate(combined_poses, axis=0)
     return combined_poses.reshape(-1, len(joint_indices) // 3, 3)
