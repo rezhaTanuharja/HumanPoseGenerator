@@ -1,13 +1,30 @@
+"""
+Visualize a reverse pseudo-diffusion, i.e., from uniformly distributed points to the identity element.
+Visualization is through 3D-plotting the axis-angle representation.
+Saves several plots throughout the reverse diffusion process.
+
+Author
+------
+Tanuharja, R.A. -- tanuharja@ias.uni-stuttgart.de
+
+Date
+----
+2024-04-20
+"""
+
 import matplotlib.pyplot as plt
 import torch
-from config import CONFIG
 from diffusionmodels import manifolds
 
-from humanposegenerator import models, pipelines, utilities
+from humanposegenerator import config, models, pipelines, utilities
 
 
 def main():
-    parameters = CONFIG["velocimeter"]
+    parameters = config.CONFIG["velocimeter"]
+
+    num_time_steps = 1200
+    num_time_steps_per_save = 50
+    num_samples = 3000
 
     manifold = manifolds.rotationalgroups.SpecialOrthogonal3(
         device=parameters["device"],
@@ -17,19 +34,14 @@ def main():
     velocity = models.sequential.Assembly(parameters["model"])
     velocity.to(parameters["device"])
 
-    checkpoint = torch.load(
+    state_dict = utilities.torch_module.load_distributed_state_dict(
         "humanposegenerator/checkpoints/velocimeter.pth",
-        weights_only=True,
     )
 
-    state_dict = checkpoint["model_state_dict"]
-    module_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
-
-    velocity.load_state_dict(module_state_dict)
-
+    velocity.load_state_dict(state_dict)
     velocity.eval()
 
-    position = utilities.sample.sample_uniform_so3(num_samples=3000).to(
+    position = utilities.sample.sample_uniform_so3(num_samples=num_samples).to(
         parameters["device"],
     )
 
@@ -41,17 +53,20 @@ def main():
         dtype=parameters["data_type"],
     )
 
-    time_decrement = parameters["period"] / 1200
+    time_decrement = parameters["period"] / num_time_steps
 
     encoder = pipelines.encoders.create_encoder(parameters)
 
-    for i in range(1200):
+    for time_step in range(num_time_steps):
         position = manifold.exp(
             position,
-            abs(time_decrement) * velocity(position.view(3000, 9), encoder(time)),
+            abs(time_decrement)
+            * velocity(position.view(num_samples, 9), encoder(time)),
         )
 
-        if i % 50 == 49:
+        time = time - time_decrement
+
+        if (time_step + 1) % num_time_steps_per_save == 0:
             axis_angle = (
                 manifold.log(
                     torch.eye(
@@ -61,6 +76,7 @@ def main():
                     ),
                     position,
                 )
+                .view(num_samples, 9)
                 .cpu()
                 .detach()
                 .numpy()
@@ -69,24 +85,23 @@ def main():
             fig = plt.figure()
             ax = fig.add_subplot(111, projection="3d")
 
-            for j in range(axis_angle.shape[0]):
-                ax.scatter(
-                    axis_angle[j][:, 0],
-                    axis_angle[j][:, 1],
-                    axis_angle[j][:, 2],
-                    marker="x",
-                    s=1,
-                    alpha=0.2,
-                )
+            ax.scatter(
+                axis_angle[:, 0],
+                axis_angle[:, 1],
+                axis_angle[:, 2],
+                marker="x",
+                s=1,
+                alpha=0.2,
+            )
 
-                ax.set_xlim([-torch.pi, torch.pi])
-                ax.set_ylim([-torch.pi, torch.pi])
-                ax.set_zlim([-torch.pi, torch.pi])
+            ax.set_xlim([-torch.pi, torch.pi])
+            ax.set_ylim([-torch.pi, torch.pi])
+            ax.set_zlim([-torch.pi, torch.pi])
 
-                ax.set_box_aspect([1, 1, 1])
+            ax.set_box_aspect([1, 1, 1])
 
-                plt.savefig(f"diffusion_{(i + 1):04}.png")
-                plt.close()
+            plt.savefig(f"diffusion_{(time_step + 1):04}.png")
+            plt.close(fig)
 
 
 if __name__ == "__main__":
