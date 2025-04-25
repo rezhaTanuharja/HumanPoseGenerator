@@ -7,6 +7,7 @@ log
 *.pth
 *.png
 *.npy
+*.jpg
 
 downloads/
 checkpoints/
