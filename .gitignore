@@ -13,5 +13,6 @@ downloads/
 checkpoints/
 output_files/
 losses/
+body_models/
 
 .DS_store
