@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Tuple
 
 import torch
+import torch_geometric.nn
 
 
 def set_dropout_rate(model: torch.nn.Module, rate: float) -> None:
@@ -48,7 +49,7 @@ def get_parameters(
             continue
 
         if getattr(module, parameter_name, None) is not None:
-            parameters_to_prune.append((name, module, parameter_name))
+            parameters_to_prune.append((module, parameter_name))
 
     return parameters_to_prune
 
@@ -110,3 +111,26 @@ def load_distributed_state_dict(checkpoint_path: str) -> Dict[str, Any]:
     state_dict = checkpoint["model_state_dict"]
 
     return {k.replace("module.", ""): v for k, v in state_dict.items()}
+
+
+def initiate_model(model: torch.nn.Module, negative_slope: float):
+    for module in model.modules():
+        if isinstance(module, torch.nn.Linear):
+            torch.nn.init.kaiming_normal_(
+                module.weight,
+                a=negative_slope,
+                mode="fan_in",
+                nonlinearity="leaky_relu",
+            )
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+
+        # elif isinstance(module, torch_geometric.nn.GCNConv):
+        #     torch.nn.init.kaiming_normal_(
+        #         module.lin.weight,
+        #         a=negative_slope,
+        #         mode="fan_in",
+        #         nonlinearity="leaky_relu",
+        #     )
+        #     if module.lin.bias is not None:
+        #         torch.nn.init.zeros_(module.lin.bias)

@@ -21,10 +21,7 @@ class FiLM(torch.nn.Module):
     In the example, `128 = 2 * 64` and the prediction will have shape `(..., 16)`.
     """
 
-    def __init__(
-        self,
-        modulator: torch.nn.Module,
-    ) -> None:
+    def __init__(self, modulator: torch.nn.Module) -> None:
         """
         Instantiate a FiLM layer by specifying a modulator and a main block.
 

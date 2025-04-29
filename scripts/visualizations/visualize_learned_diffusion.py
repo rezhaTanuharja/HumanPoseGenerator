@@ -76,7 +76,7 @@ def main():
                     ),
                     position,
                 )
-                .view(num_samples, 9)
+                .view(num_samples, 3)
                 .cpu()
                 .detach()
                 .numpy()

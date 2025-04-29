@@ -58,12 +58,26 @@ class Assembly(torch.nn.Module):
                     models.submodels.mlp.MultiLayerPerceptron(**component["mlp"]),
                 )
 
+            if "concatenator" in component:
+                self._layers.append(
+                    models.submodels.concatenation.Concatenator(
+                        **component["concatenator"],
+                    ),
+                )
+
             if "modulator" in component:
                 modulator = models.submodels.mlp.MultiLayerPerceptron(
                     **component["modulator"],
                 )
 
                 self._layers.append(models.submodels.film.FiLM(modulator=modulator))
+
+            if "gnn" in component:
+                self._layers.append(
+                    models.submodels.gnn.GraphNeuralNetwork(
+                        **component["gnn"],
+                    ),
+                )
 
     def forward(self, signal: torch.Tensor, condition: torch.Tensor) -> torch.Tensor:
         """

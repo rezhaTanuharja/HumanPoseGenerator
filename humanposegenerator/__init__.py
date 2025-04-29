@@ -17,11 +17,12 @@ Date
 2024-04-15
 """
 
-from . import config, models, pipelines, utilities
+from . import config, models, pipelines, time_integrators, utilities
 
 __all__ = [
     "config",
     "models",
     "pipelines",
+    "time_integrators",
     "utilities",
 ]

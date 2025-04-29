@@ -14,19 +14,28 @@ import os
 
 import torch
 import torch.distributed
+import torch.nn.utils.prune
+from torch.nn import parameter
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler, TensorDataset
 
+from torch_geometric.data import Data
 from humanposegenerator import config, models, pipelines, utilities
 
 
 def main(local_rank: int = 0, world_size: int = 1):
     pose_generator_config = config.CONFIG["pose_generator"]
 
+    pose_generator_config["edge_index"] = pose_generator_config["edge_index"].to(
+        pose_generator_config["device"],
+    )
+
     dataset = utilities.amass.load_and_combine_poses(
         pose_generator_config["data_directory"],
         pose_generator_config["joint_indices"],
     )
+
+    dataset = dataset[: pose_generator_config["total_size"]]
 
     tensor_dataset = TensorDataset(
         torch.from_numpy(dataset).to(dtype=pose_generator_config["data_type"]),
@@ -52,16 +61,25 @@ def main(local_rank: int = 0, world_size: int = 1):
 
     model = models.sequential.Assembly(pose_generator_config["model"])
     model.to(pose_generator_config["device"])
+
+    # utilities.torch_module.initiate_model(model, 0.005)
+
     model.train()
 
+    # distributed_model = model
     distributed_model = DistributedDataParallel(model, device_ids=[local_rank])
+
+    parameters_to_prune = utilities.torch_module.get_parameters(
+        distributed_model,
+        "weight",
+    )
 
     optimizer = torch.optim.Adam(
         distributed_model.parameters(),
         lr=pose_generator_config["learning_rate"],
     )
 
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.SmoothL1Loss()
 
     for epoch in range(pose_generator_config["num_epochs"]):
         running_loss = 0.0
@@ -71,6 +89,13 @@ def main(local_rank: int = 0, world_size: int = 1):
             model,
             pose_generator_config["dropout_rate"](epoch),
         )
+
+        if epoch in pose_generator_config["epoch_for_pruning"]:
+            torch.nn.utils.prune.global_unstructured(
+                parameters=parameters_to_prune,
+                pruning_method=torch.nn.utils.prune.L1Unstructured,
+                amount=pose_generator_config["prune_amount"],
+            )
 
         for batch in dataloader:
             (poses,) = batch
@@ -90,7 +115,10 @@ def main(local_rank: int = 0, world_size: int = 1):
 
             predicted_velocity = distributed_model(
                 noisy_poses.flatten(-3),
+                # noisy_poses.flatten(-2),
+                # graph_noisy_poses.x,
                 encoded_time,
+                # encoded_time.flatten(0, 1),
             )
 
             reference_velocity = velocimeter(
@@ -135,6 +163,6 @@ if __name__ == "__main__":
 
     try:
         main(local_rank, world_size)
-    except Exception as e:
         torch.distributed.destroy_process_group()
+    except Exception as e:
         raise e
